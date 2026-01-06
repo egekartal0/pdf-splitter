@@ -429,53 +429,68 @@ async function smartChapterDetection() {
 // ========== TOC (Table of Contents) Detection ==========
 async function detectFromTOC() {
     try {
-        // Search first 15 pages for TOC
-        const searchLimit = Math.min(15, state.totalPages);
+        // Search first 20 pages for TOC
+        const searchLimit = Math.min(20, state.totalPages);
         let tocPageStart = -1;
         let tocPageEnd = -1;
+        let bestTocPage = -1;
+        let bestScore = 0;
 
-        // Find TOC page
+        // Find TOC page - try multiple approaches
         for (let pageNum = 1; pageNum <= searchLimit; pageNum++) {
             const pageData = await getPageTextWithStructure(pageNum);
             const text = pageData.fullText.toLowerCase();
+            const lines = pageData.fullText.split('\n');
 
-            // Check for TOC indicators
+            // Count lines ending with numbers (TOC indicators)
+            const linesWithNumbers = lines.filter(l => {
+                const trimmed = l.trim();
+                // Match: "text 123" or "text...123" or "text . . . 123"
+                return /[\s\.]+\d+\s*$/.test(trimmed) && trimmed.length > 5;
+            }).length;
+
+            // Score this page
+            let score = linesWithNumbers;
+
+            // Boost score if has TOC keywords
             if (text.includes('contents') ||
                 text.includes('table of contents') ||
                 text.includes('içindekiler') ||
-                text.includes('index')) {
+                (text.includes('chapter') && linesWithNumbers >= 2) ||
+                (text.includes('part') && linesWithNumbers >= 2)) {
+                score += 5;
+            }
 
-                // Verify it's actually a TOC (has page numbers)
-                const lines = pageData.fullText.split('\n');
-                const linesWithNumbers = lines.filter(l => /\d+\s*$/.test(l.trim())).length;
+            console.log(`Page ${pageNum}: ${linesWithNumbers} lines with numbers, score: ${score}`);
 
-                if (linesWithNumbers >= 3) {
-                    tocPageStart = pageNum;
-                    tocPageEnd = pageNum;
-
-                    // Check if TOC spans multiple pages
-                    for (let nextPage = pageNum + 1; nextPage <= Math.min(pageNum + 5, searchLimit); nextPage++) {
-                        const nextPageData = await getPageTextWithStructure(nextPage);
-                        const nextLines = nextPageData.fullText.split('\n');
-                        const nextLinesWithNumbers = nextLines.filter(l => /\d+\s*$/.test(l.trim())).length;
-
-                        if (nextLinesWithNumbers >= 3) {
-                            tocPageEnd = nextPage;
-                        } else {
-                            break;
-                        }
-                    }
-                    break;
-                }
+            if (score > bestScore && linesWithNumbers >= 2) {
+                bestScore = score;
+                bestTocPage = pageNum;
             }
         }
 
-        if (tocPageStart === -1) {
+        if (bestTocPage === -1) {
             console.log('No TOC page found');
             return null;
         }
 
-        console.log(`TOC found on pages ${tocPageStart}-${tocPageEnd}`);
+        tocPageStart = bestTocPage;
+        tocPageEnd = bestTocPage;
+
+        // Check if TOC spans multiple pages
+        for (let nextPage = tocPageStart + 1; nextPage <= Math.min(tocPageStart + 5, searchLimit); nextPage++) {
+            const nextPageData = await getPageTextWithStructure(nextPage);
+            const nextLines = nextPageData.fullText.split('\n');
+            const nextLinesWithNumbers = nextLines.filter(l => /[\s\.]+\d+\s*$/.test(l.trim())).length;
+
+            if (nextLinesWithNumbers >= 2) {
+                tocPageEnd = nextPage;
+            } else {
+                break;
+            }
+        }
+
+        console.log(`TOC found on pages ${tocPageStart}-${tocPageEnd} (score: ${bestScore})`);
 
         // Extract all TOC text
         let tocText = '';
