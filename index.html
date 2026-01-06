@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Bölüm Ayırıcı</title>
+    <meta name="description" content="PDF kitaplarınızı bölümlerine ayırın ve ayrı dosyalar olarak indirin">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <h1>PDF Bölüm Ayırıcı</h1>
+            </div>
+            <p class="subtitle">Kitaplarınızı bölümlerine ayırın, ayrı PDF'ler olarak indirin</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section id="upload-section" class="upload-section">
+                <div class="upload-zone" id="dropZone">
+                    <div class="upload-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h2>PDF Dosyanızı Yükleyin</h2>
+                    <p>Sürükleyip bırakın veya seçmek için tıklayın</p>
+                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                    <button class="btn btn-primary" id="selectFileBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Dosya Seç
+                    </button>
+                </div>
+            </section>
+
+            <!-- Loading Section -->
+            <section id="loading-section" class="loading-section hidden">
+                <div class="loader">
+                    <div class="loader-spinner"></div>
+                    <p id="loadingText">PDF yükleniyor...</p>
+                </div>
+            </section>
+
+            <!-- Chapters Section -->
+            <section id="chapters-section" class="chapters-section hidden">
+                <div class="pdf-info">
+                    <div class="pdf-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                    </div>
+                    <div class="pdf-details">
+                        <h3 id="pdfName">document.pdf</h3>
+                        <p id="pdfInfo">0 sayfa</p>
+                    </div>
+                    <button class="btn btn-secondary" id="newPdfBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"></polyline>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                        </svg>
+                        Yeni PDF
+                    </button>
+                </div>
+
+                <div class="chapters-header">
+                    <div class="chapters-title">
+                        <h2>Bölümler</h2>
+                        <span class="chapter-count" id="chapterCount">0 bölüm</span>
+                    </div>
+                    <div class="chapters-actions">
+                        <button class="btn btn-icon" id="selectAllBtn" title="Tümünü Seç">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 11 12 14 22 4"></polyline>
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                            </svg>
+                        </button>
+                        <button class="btn btn-icon" id="addChapterBtn" title="Manuel Bölüm Ekle">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chapters-list" id="chaptersList">
+                    <!-- Chapters will be dynamically inserted here -->
+                </div>
+
+                <div class="download-section">
+                    <button class="btn btn-primary btn-large" id="downloadSelectedBtn" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span id="downloadBtnText">Seçilenleri İndir</span>
+                    </button>
+                    <button class="btn btn-secondary btn-large" id="downloadAllBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Tümünü ZIP Olarak İndir
+                    </button>
+                </div>
+            </section>
+
+            <!-- No Chapters Section -->
+            <section id="no-chapters-section" class="no-chapters-section hidden">
+                <div class="no-chapters-content">
+                    <svg class="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                        </path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <h2>Otomatik Bölüm Tespit Edilemedi</h2>
+                    <p>Bu PDF'de bookmark veya içindekiler tablosu bulunamadı. Manuel olarak bölüm ekleyebilirsiniz.</p>
+                    <button class="btn btn-primary" id="addManualChapterBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Manuel Bölüm Ekle
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Add Chapter Modal -->
+        <div class="modal hidden" id="addChapterModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Yeni Bölüm Ekle</h3>
+                    <button class="btn btn-icon modal-close" id="closeModalBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="chapterName">Bölüm Adı</label>
+                        <input type="text" id="chapterName" placeholder="örn: Bölüm 1 - Giriş">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startPage">Başlangıç Sayfası</label>
+                            <input type="number" id="startPage" min="1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="endPage">Bitiş Sayfası</label>
+                            <input type="number" id="endPage" min="1" value="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="cancelModalBtn">İptal</button>
+                    <button class="btn btn-primary" id="saveChapterBtn">Kaydet</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Modal -->
+        <div class="modal hidden" id="progressModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content modal-progress">
+                <div class="progress-content">
+                    <div class="progress-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                    </div>
+                    <h3 id="progressTitle">PDF'ler Hazırlanıyor</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="progressText">0 / 0 bölüm işlendi</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Modal -->
+        <div class="modal hidden" id="previewModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content modal-preview">
+                <div class="modal-header">
+                    <div class="preview-header-info">
+                        <h3 id="previewTitle">Bölüm Önizleme</h3>
+                        <span class="preview-page-info" id="previewPageInfo">Sayfa 1 - 10</span>
+                    </div>
+                    <button class="btn btn-icon modal-close" id="closePreviewBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body preview-body">
+                    <div class="preview-content" id="previewContent">
+                        <div class="preview-loading">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Tüm işlemler tarayıcınızda gerçekleşir. Dosyalarınız sunucuya yüklenmez.</p>
+        </footer>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <script src="app.js"></script>
+</body>
+
+</html>
