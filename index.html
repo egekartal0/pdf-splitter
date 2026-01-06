@@ -27,6 +27,55 @@
         </header>
 
         <main class="main-content">
+            <!-- AI Settings -->
+            <div class="ai-settings" id="aiSettings">
+                <div class="ai-header" id="aiHeader">
+                    <div class="ai-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                            height="16">
+                            <path
+                                d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z">
+                            </path>
+                            <circle cx="7.5" cy="14.5" r="1.5"></circle>
+                            <circle cx="16.5" cy="14.5" r="1.5"></circle>
+                        </svg>
+                        <span>AI ile Akıllı Tespit</span>
+                    </div>
+                    <button class="btn btn-icon btn-toggle" id="toggleAiSettings">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                            height="16">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+                </div>
+                <div class="ai-content hidden" id="aiContent">
+                    <p class="ai-description">Google Gemini AI kullanarak bölümleri otomatik tespit edin. Daha doğru
+                        sonuçlar için API key girin.</p>
+                    <div class="form-group">
+                        <label for="apiKeyInput">Gemini API Key</label>
+                        <div class="api-key-input-wrapper">
+                            <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
+                            <button class="btn btn-icon" id="toggleApiKeyVisibility" title="Göster/Gizle">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                    height="16">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                        <small class="form-hint">
+                            <a href="https://aistudio.google.com/apikey" target="_blank">Ücretsiz API key al</a> - Günde
+                            60 istek ücretsiz
+                        </small>
+                    </div>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="useAiCheckbox" checked>
+                        <span class="checkbox-custom"></span>
+                        <span>AI kullan (key girilmişse)</span>
+                    </label>
+                </div>
+            </div>
+
             <!-- Upload Section -->
             <section id="upload-section" class="upload-section">
                 <div class="upload-zone" id="dropZone">

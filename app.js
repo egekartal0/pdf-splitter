@@ -5,7 +5,8 @@ const state = {
     pdfBytes: null,
     totalPages: 0,
     chapters: [],
-    selectedChapters: new Set()
+    selectedChapters: new Set(),
+    useAI: true
 };
 
 // ========== DOM Elements ==========
@@ -61,7 +62,15 @@ const elements = {
     previewTitle: document.getElementById('previewTitle'),
     previewContent: document.getElementById('previewContent'),
     closePreviewBtn: document.getElementById('closePreviewBtn'),
-    previewPageInfo: document.getElementById('previewPageInfo')
+    previewPageInfo: document.getElementById('previewPageInfo'),
+
+    // AI Settings
+    aiHeader: document.getElementById('aiHeader'),
+    aiContent: document.getElementById('aiContent'),
+    toggleAiSettings: document.getElementById('toggleAiSettings'),
+    apiKeyInput: document.getElementById('apiKeyInput'),
+    toggleApiKeyVisibility: document.getElementById('toggleApiKeyVisibility'),
+    useAiCheckbox: document.getElementById('useAiCheckbox')
 };
 
 // ========== Chapter Detection Patterns ==========
@@ -165,6 +174,32 @@ function cleanChapterTitle(title) {
 // ========== Initialize ==========
 function init() {
     setupEventListeners();
+    loadAISettings();
+}
+
+function loadAISettings() {
+    // Load saved API key from localStorage
+    const savedKey = localStorage.getItem('gemini_api_key');
+    if (savedKey && elements.apiKeyInput) {
+        elements.apiKeyInput.value = savedKey;
+    }
+
+    // Load AI preference
+    const useAI = localStorage.getItem('use_ai');
+    if (useAI !== null && elements.useAiCheckbox) {
+        elements.useAiCheckbox.checked = useAI === 'true';
+        state.useAI = useAI === 'true';
+    }
+}
+
+function saveAISettings() {
+    if (elements.apiKeyInput) {
+        localStorage.setItem('gemini_api_key', elements.apiKeyInput.value);
+    }
+    if (elements.useAiCheckbox) {
+        localStorage.setItem('use_ai', elements.useAiCheckbox.checked);
+        state.useAI = elements.useAiCheckbox.checked;
+    }
 }
 
 function setupEventListeners() {
@@ -217,6 +252,31 @@ function setupEventListeners() {
     elements.endPageInput.addEventListener('keyup', (e) => {
         if (e.key === 'Enter') saveChapter();
     });
+
+    // AI Settings
+    if (elements.aiHeader) {
+        elements.aiHeader.addEventListener('click', toggleAISettings);
+    }
+    if (elements.toggleApiKeyVisibility) {
+        elements.toggleApiKeyVisibility.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const input = elements.apiKeyInput;
+            input.type = input.type === 'password' ? 'text' : 'password';
+        });
+    }
+    if (elements.apiKeyInput) {
+        elements.apiKeyInput.addEventListener('change', saveAISettings);
+    }
+    if (elements.useAiCheckbox) {
+        elements.useAiCheckbox.addEventListener('change', saveAISettings);
+    }
+}
+
+function toggleAISettings() {
+    if (elements.aiContent && elements.toggleAiSettings) {
+        elements.aiContent.classList.toggle('hidden');
+        elements.toggleAiSettings.classList.toggle('open');
+    }
 }
 
 // ========== File Handling ==========
@@ -292,6 +352,23 @@ async function loadPDF(file) {
 
 // ========== Smart Chapter Detection ==========
 async function smartChapterDetection() {
+    const apiKey = elements.apiKeyInput?.value?.trim();
+    const useAI = elements.useAiCheckbox?.checked && apiKey;
+
+    // If AI is enabled and API key exists, try AI detection first
+    if (useAI) {
+        elements.loadingText.textContent = 'AI ile bölümler tespit ediliyor...';
+        const aiResult = await detectChaptersWithAI(apiKey);
+        if (aiResult && aiResult.length >= 2) {
+            state.chapters = aiResult;
+            calculateEndPages();
+            console.log(`AI found ${aiResult.length} chapters`);
+            return;
+        }
+        console.log('AI detection failed or returned no results, falling back to pattern matching');
+    }
+
+    // Fallback: Pattern-based detection
     const candidates = [];
     const pageTexts = [];
 
@@ -345,6 +422,114 @@ async function smartChapterDetection() {
     } else {
         state.chapters = candidates;
         calculateEndPages();
+    }
+}
+
+// ========== Gemini AI Integration ==========
+async function detectChaptersWithAI(apiKey) {
+    try {
+        // Collect text from first pages and TOC area
+        let sampleText = '';
+
+        // Get text from first 30 pages or all pages if less
+        const pagesToScan = Math.min(30, state.totalPages);
+        for (let i = 1; i <= pagesToScan; i++) {
+            const pageData = await getPageTextWithStructure(i);
+            sampleText += `\n--- PAGE ${i} ---\n${pageData.fullText}`;
+        }
+
+        // Limit text length for API
+        if (sampleText.length > 15000) {
+            sampleText = sampleText.substring(0, 15000) + '\n... (text truncated)';
+        }
+
+        const prompt = `Analyze this PDF book text and identify the MAIN chapters or parts.
+
+IMPORTANT RULES:
+1. Only identify MAIN chapters/parts (like "Chapter 1", "Part I", "Section 1", etc.)
+2. Do NOT include sub-sections, sub-chapters, or minor headings
+3. Do NOT include front matter like "Contents", "Copyright", "Dedication", "Preface"
+4. Do NOT include back matter like "Index", "Bibliography", "Notes", "Acknowledgments"
+5. Return ONLY the main content chapters
+6. Each chapter should be a significant section of the book
+
+PDF TEXT:
+${sampleText}
+
+TOTAL PAGES IN PDF: ${state.totalPages}
+
+Respond in this EXACT JSON format, nothing else:
+{
+  "chapters": [
+    {"name": "Chapter Name", "startPage": 1},
+    {"name": "Another Chapter", "startPage": 25}
+  ]
+}
+
+If you cannot detect chapters, respond with: {"chapters": []}`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    temperature: 0.1,
+                    maxOutputTokens: 2000
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Gemini API error:', errorData);
+            return null;
+        }
+
+        const data = await response.json();
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!textResponse) {
+            console.error('No text in Gemini response');
+            return null;
+        }
+
+        // Parse JSON from response
+        const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            console.error('No JSON found in response:', textResponse);
+            return null;
+        }
+
+        const parsed = JSON.parse(jsonMatch[0]);
+
+        if (!parsed.chapters || !Array.isArray(parsed.chapters)) {
+            console.error('Invalid chapters format:', parsed);
+            return null;
+        }
+
+        // Convert to our format
+        const chapters = parsed.chapters
+            .filter(ch => ch.name && ch.startPage && ch.startPage > 0 && ch.startPage <= state.totalPages)
+            .map(ch => ({
+                id: Date.now() + Math.random(),
+                name: cleanChapterTitle(ch.name),
+                startPage: parseInt(ch.startPage),
+                endPage: null
+            }));
+
+        // Sort by page number
+        chapters.sort((a, b) => a.startPage - b.startPage);
+
+        return chapters.length >= 2 ? chapters : null;
+
+    } catch (error) {
+        console.error('AI detection error:', error);
+        return null;
     }
 }
 

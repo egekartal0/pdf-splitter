@@ -111,9 +111,131 @@ body {
     padding: 0 1.5rem 2rem;
 }
 
+/* ========== AI Settings ========== */
+.ai-settings {
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.ai-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.ai-header:hover {
+    background: var(--bg-card);
+}
+
+.ai-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--accent-secondary);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.btn-toggle {
+    transition: transform var(--transition-fast);
+}
+
+.btn-toggle.open {
+    transform: rotate(180deg);
+}
+
+.ai-content {
+    padding: 0 1.25rem 1.25rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.ai-description {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    padding-top: 1rem;
+}
+
+.api-key-input-wrapper {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.api-key-input-wrapper input {
+    flex: 1;
+}
+
+.form-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.form-hint a {
+    color: var(--accent-secondary);
+    text-decoration: none;
+}
+
+.form-hint a:hover {
+    text-decoration: underline;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+}
+
+.checkbox-label input {
+    display: none;
+}
+
+.checkbox-custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-subtle);
+    border-radius: 4px;
+    background: var(--bg-tertiary);
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+.checkbox-label input:checked~.checkbox-custom {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.checkbox-custom::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 4px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    opacity: 0;
+}
+
+.checkbox-label input:checked~.checkbox-custom::after {
+    opacity: 1;
+}
+
 /* ========== Upload Section ========== */
 .upload-section {
-    margin-top: 2rem;
+    margin-top: 1rem;
 }
 
 .upload-zone {
