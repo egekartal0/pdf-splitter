@@ -358,7 +358,17 @@ async function smartChapterDetection() {
     const apiKey = elements.apiKeyInput?.value?.trim();
     const useAI = elements.useAiCheckbox?.checked && apiKey;
 
-    // If AI is enabled and API key exists, try AI detection first
+    // STEP 1: Try to find and parse Table of Contents
+    elements.loadingText.textContent = 'İçindekiler sayfası aranıyor...';
+    const tocChapters = await detectFromTOC();
+    if (tocChapters && tocChapters.length >= 2) {
+        state.chapters = tocChapters;
+        calculateEndPages();
+        console.log(`Found ${tocChapters.length} chapters from TOC`);
+        return;
+    }
+
+    // STEP 2: Try AI if enabled
     if (useAI) {
         elements.loadingText.textContent = 'AI ile bölümler tespit ediliyor...';
         const aiResult = await detectChaptersWithAI(apiKey);
@@ -371,13 +381,11 @@ async function smartChapterDetection() {
         console.log('AI detection failed or returned no results, falling back to pattern matching');
     }
 
-    // Fallback: Pattern-based detection
+    // STEP 3: Pattern-based detection
     const candidates = [];
     const pageTexts = [];
 
-    // First pass: collect all page texts and find chapter candidates
     for (let pageNum = 1; pageNum <= state.totalPages; pageNum++) {
-        // Update loading text every 10 pages
         if (pageNum % 10 === 0) {
             elements.loadingText.textContent = `Sayfa ${pageNum}/${state.totalPages} taranıyor...`;
         }
@@ -385,26 +393,21 @@ async function smartChapterDetection() {
         const pageData = await getPageTextWithStructure(pageNum);
         pageTexts[pageNum] = pageData;
 
-        // Check if this page starts a new chapter
         const chapterMatch = detectChapterStart(pageData, pageNum);
         if (chapterMatch) {
             candidates.push(chapterMatch);
         }
     }
 
-    console.log(`Found ${candidates.length} chapter candidates`);
+    console.log(`Found ${candidates.length} chapter candidates from patterns`);
 
-    // If we found candidates, use them
     if (candidates.length >= 2 && candidates.length <= 50) {
-        // Good number of chapters found
         state.chapters = candidates;
         calculateEndPages();
         return;
     }
 
-    // If too few or too many, try alternative detection
     if (candidates.length < 2) {
-        // Try to detect based on page structure (short pages, centered text, etc.)
         const structuralChapters = await detectStructuralChapters(pageTexts);
         if (structuralChapters.length >= 2) {
             state.chapters = structuralChapters;
@@ -413,19 +416,168 @@ async function smartChapterDetection() {
         }
     }
 
-    // If still nothing, offer to split evenly
-    if (candidates.length === 0 && state.totalPages > 20) {
-        // No chapters detected - leave empty, user will add manually
-        console.log('No chapters detected automatically');
-    } else if (candidates.length > 50) {
-        // Too many candidates - filter to keep only strongest matches
+    if (candidates.length > 50) {
         const filtered = filterStrongestCandidates(candidates);
         state.chapters = filtered;
         calculateEndPages();
-    } else {
+    } else if (candidates.length > 0) {
         state.chapters = candidates;
         calculateEndPages();
     }
+}
+
+// ========== TOC (Table of Contents) Detection ==========
+async function detectFromTOC() {
+    try {
+        // Search first 15 pages for TOC
+        const searchLimit = Math.min(15, state.totalPages);
+        let tocPageStart = -1;
+        let tocPageEnd = -1;
+
+        // Find TOC page
+        for (let pageNum = 1; pageNum <= searchLimit; pageNum++) {
+            const pageData = await getPageTextWithStructure(pageNum);
+            const text = pageData.fullText.toLowerCase();
+
+            // Check for TOC indicators
+            if (text.includes('contents') ||
+                text.includes('table of contents') ||
+                text.includes('içindekiler') ||
+                text.includes('index')) {
+
+                // Verify it's actually a TOC (has page numbers)
+                const lines = pageData.fullText.split('\n');
+                const linesWithNumbers = lines.filter(l => /\d+\s*$/.test(l.trim())).length;
+
+                if (linesWithNumbers >= 3) {
+                    tocPageStart = pageNum;
+                    tocPageEnd = pageNum;
+
+                    // Check if TOC spans multiple pages
+                    for (let nextPage = pageNum + 1; nextPage <= Math.min(pageNum + 5, searchLimit); nextPage++) {
+                        const nextPageData = await getPageTextWithStructure(nextPage);
+                        const nextLines = nextPageData.fullText.split('\n');
+                        const nextLinesWithNumbers = nextLines.filter(l => /\d+\s*$/.test(l.trim())).length;
+
+                        if (nextLinesWithNumbers >= 3) {
+                            tocPageEnd = nextPage;
+                        } else {
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (tocPageStart === -1) {
+            console.log('No TOC page found');
+            return null;
+        }
+
+        console.log(`TOC found on pages ${tocPageStart}-${tocPageEnd}`);
+
+        // Extract all TOC text
+        let tocText = '';
+        for (let p = tocPageStart; p <= tocPageEnd; p++) {
+            const pageData = await getPageTextWithStructure(p);
+            tocText += pageData.fullText + '\n';
+        }
+
+        // Parse TOC entries
+        return parseTOCText(tocText);
+
+    } catch (error) {
+        console.error('TOC detection error:', error);
+        return null;
+    }
+}
+
+function parseTOCText(tocText) {
+    const chapters = [];
+    const lines = tocText.split('\n');
+
+    // Skip patterns - things we don't want as chapters
+    const skipWords = [
+        'contents', 'table of contents', 'içindekiler',
+        'acknowledgment', 'teşekkür', 'foreword', 'önsöz',
+        'preface', 'introduction', 'giriş', 'index', 'dizin',
+        'bibliography', 'kaynakça', 'notes', 'notlar',
+        'appendix', 'ek', 'copyright', 'dedication',
+        'about the author', 'yazar hakkında', 'epigraph'
+    ];
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.length < 3) continue;
+
+        // Look for pattern: "Title ... 123" or "Title 123"
+        // Match: text followed by page number at end
+        const match = trimmed.match(/^(.+?)\s*\.{0,}[\s\.]+(\d+)\s*$/);
+
+        if (match) {
+            let title = match[1].trim();
+            const pageNum = parseInt(match[2]);
+
+            // Clean up title
+            title = title.replace(/\.+$/, '').trim();
+            title = cleanChapterTitle(title);
+
+            // Skip if too short or in skip list
+            if (title.length < 2) continue;
+            const lowerTitle = title.toLowerCase();
+            if (skipWords.some(skip => lowerTitle === skip || lowerTitle.startsWith(skip + ' '))) {
+                continue;
+            }
+
+            // Skip if just a number
+            if (/^\d+$/.test(title)) continue;
+
+            // Validate page number
+            if (pageNum > 0 && pageNum <= state.totalPages) {
+                // Avoid duplicates
+                if (!chapters.some(ch => ch.startPage === pageNum)) {
+                    chapters.push({
+                        id: Date.now() + Math.random(),
+                        name: title,
+                        startPage: pageNum,
+                        endPage: null
+                    });
+                }
+            }
+        }
+    }
+
+    // Sort by page number
+    chapters.sort((a, b) => a.startPage - b.startPage);
+
+    // Filter out tiny chapters (less than 3 pages)
+    const minPages = Math.max(2, Math.floor(state.totalPages / 100));
+    const filteredChapters = [];
+
+    for (let i = 0; i < chapters.length; i++) {
+        const current = chapters[i];
+        const next = chapters[i + 1];
+        const endPage = next ? next.startPage - 1 : state.totalPages;
+        const pageCount = endPage - current.startPage + 1;
+
+        if (pageCount >= minPages) {
+            current.endPage = endPage;
+            filteredChapters.push(current);
+        }
+    }
+
+    // Recalculate end pages
+    for (let i = 0; i < filteredChapters.length; i++) {
+        if (i < filteredChapters.length - 1) {
+            filteredChapters[i].endPage = filteredChapters[i + 1].startPage - 1;
+        } else {
+            filteredChapters[i].endPage = state.totalPages;
+        }
+    }
+
+    console.log(`Parsed ${filteredChapters.length} chapters from TOC`);
+    return filteredChapters.length >= 2 ? filteredChapters : null;
 }
 
 // ========== Gemini AI Integration ==========
