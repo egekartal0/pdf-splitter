@@ -461,6 +461,11 @@ async function detectFromTOC() {
                 score += 5;
             }
 
+            // Debug: show first 200 chars of first 5 pages to verify text extraction
+            if (pageNum <= 5) {
+                console.log(`Page ${pageNum} text preview:`, text.substring(0, 200).replace(/\n/g, ' '));
+            }
+
             console.log(`Page ${pageNum}: ${linesWithNumbers} lines with numbers, score: ${score}`);
 
             if (score > bestScore && linesWithNumbers >= 2) {
