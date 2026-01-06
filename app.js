@@ -6,7 +6,10 @@ const state = {
     totalPages: 0,
     chapters: [],
     selectedChapters: new Set(),
-    useAI: true
+    useAI: true,
+    // Preview state
+    previewChapter: null,
+    previewCurrentPage: 1
 };
 
 // ========== DOM Elements ==========
@@ -878,13 +881,72 @@ function createChapterElement(chapter, index) {
 async function previewChapter(chapter) {
     if (!elements.previewModal) return;
 
+    state.previewChapter = chapter;
+    state.previewCurrentPage = chapter.startPage;
+
     elements.previewTitle.textContent = chapter.name;
-    elements.previewPageInfo.textContent = `Sayfa ${chapter.startPage} - ${chapter.endPage}`;
-    elements.previewContent.innerHTML = '<div class="preview-loading">Yükleniyor...</div>';
     elements.previewModal.classList.remove('hidden');
 
+    await renderPreviewPage();
+}
+
+async function renderPreviewPage() {
+    if (!state.previewChapter) return;
+
+    const chapter = state.previewChapter;
+    const pageNum = state.previewCurrentPage;
+    const totalChapterPages = chapter.endPage - chapter.startPage + 1;
+    const currentPageIndex = pageNum - chapter.startPage + 1;
+
+    // Update page info
+    elements.previewPageInfo.textContent = `Sayfa ${pageNum} (${currentPageIndex}/${totalChapterPages})`;
+
+    // Show navigation buttons
+    const hasNav = elements.previewContent.querySelector('.preview-nav');
+    if (!hasNav) {
+        elements.previewContent.innerHTML = `
+            <div class="preview-nav">
+                <button class="btn btn-secondary btn-prev" ${pageNum <= chapter.startPage ? 'disabled' : ''}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    Önceki
+                </button>
+                <span class="preview-page-counter">${currentPageIndex} / ${totalChapterPages}</span>
+                <button class="btn btn-secondary btn-next" ${pageNum >= chapter.endPage ? 'disabled' : ''}>
+                    Sonraki
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+            <div class="preview-canvas-container">
+                <div class="preview-loading">Yükleniyor...</div>
+            </div>
+        `;
+
+        // Add event listeners
+        const prevBtn = elements.previewContent.querySelector('.btn-prev');
+        const nextBtn = elements.previewContent.querySelector('.btn-next');
+
+        prevBtn.addEventListener('click', () => navigatePreview(-1));
+        nextBtn.addEventListener('click', () => navigatePreview(1));
+    } else {
+        // Update button states
+        const prevBtn = elements.previewContent.querySelector('.btn-prev');
+        const nextBtn = elements.previewContent.querySelector('.btn-next');
+        const counter = elements.previewContent.querySelector('.preview-page-counter');
+
+        prevBtn.disabled = pageNum <= chapter.startPage;
+        nextBtn.disabled = pageNum >= chapter.endPage;
+        counter.textContent = `${currentPageIndex} / ${totalChapterPages}`;
+    }
+
+    const canvasContainer = elements.previewContent.querySelector('.preview-canvas-container');
+    canvasContainer.innerHTML = '<div class="preview-loading">Yükleniyor...</div>';
+
     try {
-        const page = await state.pdfDoc.getPage(chapter.startPage);
+        const page = await state.pdfDoc.getPage(pageNum);
         const scale = 1.5;
         const viewport = page.getViewport({ scale });
 
@@ -898,20 +960,34 @@ async function previewChapter(chapter) {
             viewport: viewport
         }).promise;
 
-        elements.previewContent.innerHTML = '';
+        canvasContainer.innerHTML = '';
         canvas.style.maxWidth = '100%';
         canvas.style.height = 'auto';
-        elements.previewContent.appendChild(canvas);
+        canvasContainer.appendChild(canvas);
 
     } catch (error) {
         console.error('Preview error:', error);
-        elements.previewContent.innerHTML = '<div class="preview-error">Önizleme yüklenemedi</div>';
+        canvasContainer.innerHTML = '<div class="preview-error">Önizleme yüklenemedi</div>';
+    }
+}
+
+function navigatePreview(direction) {
+    if (!state.previewChapter) return;
+
+    const chapter = state.previewChapter;
+    const newPage = state.previewCurrentPage + direction;
+
+    if (newPage >= chapter.startPage && newPage <= chapter.endPage) {
+        state.previewCurrentPage = newPage;
+        renderPreviewPage();
     }
 }
 
 function closePreviewModal() {
     if (elements.previewModal) {
         elements.previewModal.classList.add('hidden');
+        state.previewChapter = null;
+        state.previewCurrentPage = 1;
     }
 }
 
