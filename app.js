@@ -443,30 +443,32 @@ async function detectChaptersWithAI(apiKey) {
             sampleText = sampleText.substring(0, 15000) + '\n... (text truncated)';
         }
 
-        const prompt = `Analyze this PDF book text and identify the MAIN chapters or parts.
+        // Calculate expected chapter size
+        const expectedChapterPages = Math.floor(state.totalPages / 10); // Assume ~10 chapters
 
-IMPORTANT RULES:
-1. Only identify MAIN chapters/parts (like "Chapter 1", "Part I", "Section 1", etc.)
-2. Do NOT include sub-sections, sub-chapters, or minor headings
-3. Do NOT include front matter like "Contents", "Copyright", "Dedication", "Preface"
-4. Do NOT include back matter like "Index", "Bibliography", "Notes", "Acknowledgments"
-5. Return ONLY the main content chapters
-6. Each chapter should be a significant section of the book
+        const prompt = `You are analyzing a PDF book to find its MAIN chapters.
 
-PDF TEXT:
+CRITICAL: This book has ${state.totalPages} total pages. Each real chapter should have AT LEAST ${Math.max(10, expectedChapterPages)} pages.
+
+Look for the Table of Contents or chapter headings. Books typically have 5-15 main chapters.
+
+RULES:
+1. Find ONLY main chapters (Chapter 1, Part I, Section 1, etc.)
+2. Do NOT list every page as a chapter - that's wrong
+3. Do NOT include: Contents, Copyright, Dedication, Preface, Introduction, Index, Notes, Bibliography
+4. Each chapter must be a SIGNIFICANT section (many pages, not just 1 page)
+5. If you see page numbers in Contents, use those exact page numbers
+6. Return between 3-20 chapters maximum
+
+PDF TEXT (first ${pagesToScan} pages):
 ${sampleText}
 
-TOTAL PAGES IN PDF: ${state.totalPages}
+TOTAL PAGES: ${state.totalPages}
 
-Respond in this EXACT JSON format, nothing else:
-{
-  "chapters": [
-    {"name": "Chapter Name", "startPage": 1},
-    {"name": "Another Chapter", "startPage": 25}
-  ]
-}
+Return ONLY valid JSON:
+{"chapters": [{"name": "Chapter Title", "startPage": 15}, {"name": "Another Chapter", "startPage": 45}]}
 
-If you cannot detect chapters, respond with: {"chapters": []}`;
+If unsure, return: {"chapters": []}`;
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
@@ -498,6 +500,8 @@ If you cannot detect chapters, respond with: {"chapters": []}`;
             return null;
         }
 
+        console.log('AI Response:', textResponse);
+
         // Parse JSON from response
         const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
@@ -513,7 +517,7 @@ If you cannot detect chapters, respond with: {"chapters": []}`;
         }
 
         // Convert to our format
-        const chapters = parsed.chapters
+        let chapters = parsed.chapters
             .filter(ch => ch.name && ch.startPage && ch.startPage > 0 && ch.startPage <= state.totalPages)
             .map(ch => ({
                 id: Date.now() + Math.random(),
@@ -525,6 +529,47 @@ If you cannot detect chapters, respond with: {"chapters": []}`;
         // Sort by page number
         chapters.sort((a, b) => a.startPage - b.startPage);
 
+        // Remove duplicates (same start page)
+        const seen = new Set();
+        chapters = chapters.filter(ch => {
+            if (seen.has(ch.startPage)) return false;
+            seen.add(ch.startPage);
+            return true;
+        });
+
+        // Calculate end pages
+        for (let i = 0; i < chapters.length; i++) {
+            if (i < chapters.length - 1) {
+                chapters[i].endPage = chapters[i + 1].startPage - 1;
+            } else {
+                chapters[i].endPage = state.totalPages;
+            }
+        }
+
+        // CRITICAL: Filter out chapters that are too small (less than 5 pages)
+        // This prevents detecting headers or page numbers as chapters
+        const minPages = Math.max(3, Math.floor(state.totalPages / 100));
+        chapters = chapters.filter(ch => {
+            const pageCount = ch.endPage - ch.startPage + 1;
+            return pageCount >= minPages;
+        });
+
+        // Recalculate end pages after filtering
+        for (let i = 0; i < chapters.length; i++) {
+            if (i < chapters.length - 1) {
+                chapters[i].endPage = chapters[i + 1].startPage - 1;
+            } else {
+                chapters[i].endPage = state.totalPages;
+            }
+        }
+
+        // If we still have too many chapters (>25), something is wrong
+        if (chapters.length > 25) {
+            console.log('Too many chapters detected, AI failed');
+            return null;
+        }
+
+        console.log(`AI found ${chapters.length} valid chapters after filtering`);
         return chapters.length >= 2 ? chapters : null;
 
     } catch (error) {
