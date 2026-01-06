@@ -104,6 +104,64 @@ const SKIP_PATTERNS = [
     /^\d+$/, // Just a page number
 ];
 
+// ========== Text Normalization Functions ==========
+// Fix spaced-out letters like "O N W R I T I N G" -> "ON WRITING"
+function normalizeSpacedText(text) {
+    if (!text) return '';
+
+    // Check if text has pattern like "A B C D" (single letters with spaces)
+    // Count single characters separated by spaces
+    const parts = text.split(/\s+/);
+    const singleChars = parts.filter(p => p.length === 1 && /[A-Za-z]/.test(p));
+
+    // If more than 60% are single characters, it's probably spaced text
+    if (parts.length > 3 && singleChars.length / parts.length > 0.6) {
+        // Remove spaces between single letters
+        return text.replace(/\b([A-Za-z])\s+(?=[A-Za-z]\b)/g, '$1');
+    }
+
+    // Also fix partial spacing like "O N WRITING" or "ON W RITING"
+    // Pattern: single letter, space, single letter at word boundaries
+    let result = text;
+
+    // Fix patterns like "O N " at start
+    result = result.replace(/^([A-Z])\s([A-Z])\s/g, '$1$2 ');
+
+    // Fix patterns like " A P OSTSCRIPT"
+    result = result.replace(/\s([A-Z])\s([A-Z])\s([A-Z]+)/g, ' $1$2$3');
+
+    // General fix for spaced capitals
+    result = result.replace(/([A-Z])\s([A-Z])(?=\s|$)/g, '$1$2');
+
+    // Clean up any double spaces
+    result = result.replace(/\s+/g, ' ').trim();
+
+    return result;
+}
+
+// Clean chapter title - normalize and format
+function cleanChapterTitle(title) {
+    if (!title) return 'Untitled';
+
+    // First normalize spaced text
+    let cleaned = normalizeSpacedText(title);
+
+    // Remove excessive whitespace
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+    // Capitalize first letter of each word for titles in ALL CAPS
+    if (cleaned === cleaned.toUpperCase() && cleaned.length > 3) {
+        cleaned = cleaned.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    // Limit length
+    if (cleaned.length > 100) {
+        cleaned = cleaned.substring(0, 100) + '...';
+    }
+
+    return cleaned || 'Untitled';
+}
+
 // ========== Initialize ==========
 function init() {
     setupEventListeners();
