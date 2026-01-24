@@ -67,14 +67,6 @@ const elements = {
     closePreviewBtn: document.getElementById('closePreviewBtn'),
     previewPageInfo: document.getElementById('previewPageInfo'),
 
-    // AI Settings
-    aiHeader: document.getElementById('aiHeader'),
-    aiContent: document.getElementById('aiContent'),
-    toggleAiSettings: document.getElementById('toggleAiSettings'),
-    apiKeyInput: document.getElementById('apiKeyInput'),
-    toggleApiKeyVisibility: document.getElementById('toggleApiKeyVisibility'),
-    useAiCheckbox: document.getElementById('useAiCheckbox'),
-
     // Mode Selection
     modeSelection: document.getElementById('mode-selection'),
     autoModeBtn: document.getElementById('autoModeBtn'),
@@ -189,32 +181,6 @@ function cleanChapterTitle(title) {
 // ========== Initialize ==========
 function init() {
     setupEventListeners();
-    loadAISettings();
-}
-
-function loadAISettings() {
-    // Load saved API key from localStorage
-    const savedKey = localStorage.getItem('gemini_api_key');
-    if (savedKey && elements.apiKeyInput) {
-        elements.apiKeyInput.value = savedKey;
-    }
-
-    // Load AI preference
-    const useAI = localStorage.getItem('use_ai');
-    if (useAI !== null && elements.useAiCheckbox) {
-        elements.useAiCheckbox.checked = useAI === 'true';
-        state.useAI = useAI === 'true';
-    }
-}
-
-function saveAISettings() {
-    if (elements.apiKeyInput) {
-        localStorage.setItem('gemini_api_key', elements.apiKeyInput.value);
-    }
-    if (elements.useAiCheckbox) {
-        localStorage.setItem('use_ai', elements.useAiCheckbox.checked);
-        state.useAI = elements.useAiCheckbox.checked;
-    }
 }
 
 function setupEventListeners() {
@@ -267,24 +233,6 @@ function setupEventListeners() {
     elements.endPageInput.addEventListener('keyup', (e) => {
         if (e.key === 'Enter') saveChapter();
     });
-
-    // AI Settings
-    if (elements.aiHeader) {
-        elements.aiHeader.addEventListener('click', toggleAISettings);
-    }
-    if (elements.toggleApiKeyVisibility) {
-        elements.toggleApiKeyVisibility.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const input = elements.apiKeyInput;
-            input.type = input.type === 'password' ? 'text' : 'password';
-        });
-    }
-    if (elements.apiKeyInput) {
-        elements.apiKeyInput.addEventListener('change', saveAISettings);
-    }
-    if (elements.useAiCheckbox) {
-        elements.useAiCheckbox.addEventListener('change', saveAISettings);
-    }
 
     // Mode Selection
     if (elements.autoModeBtn) {
