@@ -263,6 +263,8 @@ function toggleAISettings() {
 
 // ========== Utility: Show Section ==========
 function showSection(sectionName) {
+    console.log('showSection called with:', sectionName);
+
     // Hide all sections
     const sections = [
         'upload-section',
@@ -276,6 +278,9 @@ function showSection(sectionName) {
         const el = document.getElementById(section);
         if (el) {
             el.classList.add('hidden');
+            console.log('Hiding:', section);
+        } else {
+            console.warn('Element not found:', section);
         }
     });
 
@@ -283,6 +288,9 @@ function showSection(sectionName) {
     const targetSection = document.getElementById(sectionName);
     if (targetSection) {
         targetSection.classList.remove('hidden');
+        console.log('Showing:', sectionName);
+    } else {
+        console.error('Target section not found:', sectionName);
     }
 }
 
@@ -459,10 +467,14 @@ function handleFileSelect(e) {
 }
 
 async function loadPDF(file) {
+    console.log('loadPDF called with file:', file.name);
+
     state.pdfFile = file;
     state.chapters = [];
     state.selectedChapters.clear();
-    showSection('loading');
+
+    console.log('Calling showSection(loading)...');
+    showSection('loading-section');
     elements.loadingText.textContent = 'PDF yükleniyor...';
 
     try {
@@ -480,6 +492,9 @@ async function loadPDF(file) {
         // Update PDF info
         elements.pdfName.textContent = file.name;
         elements.pdfInfo.textContent = `${state.totalPages} sayfa`;
+
+        console.log('PDF loaded successfully. Total pages:', state.totalPages);
+        console.log('Calling showSection(mode-selection)...');
 
         // Show mode selection instead of auto-detection
         showSection('mode-selection');
