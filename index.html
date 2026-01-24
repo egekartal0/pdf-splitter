@@ -108,6 +108,66 @@
                 </div>
             </section>
 
+            <!-- Mode Selection Section -->
+            <section id="mode-selection" class="mode-selection hidden">
+                <div class="mode-container">
+                    <h2>Bölümleri Nasıl Tespit Edelim?</h2>
+                    <p class="mode-description">PDF yüklendi! Bölümleri otomatik tespit edebilir veya manuel olarak girebilirsiniz.</p>
+                    
+                    <div class="mode-buttons">
+                        <button class="btn btn-mode btn-auto" id="autoModeBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 6v6l4 2"></path>
+                            </svg>
+                            <span class="mode-title">🤖 Otomatik Tespit</span>
+                            <span class="mode-subtitle">AI & Pattern Matching</span>
+                        </button>
+                        
+                        <button class="btn btn-mode btn-manual" id="manualModeBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                            <span class="mode-title">✏️ Manuel Giriş</span>
+                            <span class="mode-subtitle">Sayfa aralıklarını kendin gir</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Manual Input Section -->
+            <section id="manual-input-section" class="manual-input-section hidden">
+                <div class="manual-container">
+                    <div class="manual-header">
+                        <h2>Bölüm Aralıklarını Gir</h2>
+                        <p>Her bölüm için isim ve sayfa aralığını belirtin.</p>
+                    </div>
+
+                    <div class="manual-rows" id="manualRows">
+                        <!-- Rows will be added dynamically -->
+                    </div>
+
+                    <button class="btn btn-secondary btn-add-row" id="addRowBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Bölüm Ekle
+                    </button>
+
+                    <div class="manual-actions">
+                        <button class="btn btn-secondary" id="cancelManualBtn">İptal</button>
+                        <button class="btn btn-primary" id="createManualChaptersBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Bölümleri Oluştur
+                        </button>
+                    </div>
+                </div>
+            </section>
+
             <!-- Chapters Section -->
             <section id="chapters-section" class="chapters-section hidden">
                 <div class="pdf-info">

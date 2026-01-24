@@ -73,7 +73,19 @@ const elements = {
     toggleAiSettings: document.getElementById('toggleAiSettings'),
     apiKeyInput: document.getElementById('apiKeyInput'),
     toggleApiKeyVisibility: document.getElementById('toggleApiKeyVisibility'),
-    useAiCheckbox: document.getElementById('useAiCheckbox')
+    useAiCheckbox: document.getElementById('useAiCheckbox'),
+
+    // Mode Selection
+    modeSelection: document.getElementById('mode-selection'),
+    autoModeBtn: document.getElementById('autoModeBtn'),
+    manualModeBtn: document.getElementById('manualModeBtn'),
+
+    // Manual Input
+    manualInputSection: document.getElementById('manual-input-section'),
+    manualRows: document.getElementById('manualRows'),
+    addRowBtn: document.getElementById('addRowBtn'),
+    cancelManualBtn: document.getElementById('cancelManualBtn'),
+    createManualChaptersBtn: document.getElementById('createManualChaptersBtn')
 };
 
 // ========== Chapter Detection Patterns ==========
@@ -273,6 +285,25 @@ function setupEventListeners() {
     if (elements.useAiCheckbox) {
         elements.useAiCheckbox.addEventListener('change', saveAISettings);
     }
+
+    // Mode Selection
+    if (elements.autoModeBtn) {
+        elements.autoModeBtn.addEventListener('click', handleAutoMode);
+    }
+    if (elements.manualModeBtn) {
+        elements.manualModeBtn.addEventListener('click', handleManualMode);
+    }
+
+    // Manual Input
+    if (elements.addRowBtn) {
+        elements.addRowBtn.addEventListener('click', addManualChapterRow);
+    }
+    if (elements.cancelManualBtn) {
+        elements.cancelManualBtn.addEventListener('click', cancelManualMode);
+    }
+    if (elements.createManualChaptersBtn) {
+        elements.createManualChaptersBtn.addEventListener('click', createManualChapters);
+    }
 }
 
 function toggleAISettings() {
@@ -280,6 +311,175 @@ function toggleAISettings() {
         elements.aiContent.classList.toggle('hidden');
         elements.toggleAiSettings.classList.toggle('open');
     }
+}
+
+// ========== Utility: Show Section ==========
+function showSection(sectionName) {
+    // Hide all sections
+    const sections = [
+        'upload-section',
+        'loading-section',
+        'mode-selection',
+        'manual-input-section',
+        'chapters-section'
+    ];
+
+    sections.forEach(section => {
+        const el = document.getElementById(section);
+        if (el) {
+            el.classList.add('hidden');
+        }
+    });
+
+    // Show requested section
+    const targetSection = document.getElementById(sectionName);
+    if (targetSection) {
+        targetSection.classList.remove('hidden');
+    }
+}
+
+// ========== Mode Selection ==========
+async function handleAutoMode() {
+    showSection('loading');
+    elements.loadingText.textContent = 'Bölümler tespit ediliyor...';
+
+    try {
+        await smartChapterDetection();
+
+        if (state.chapters.length > 0) {
+            renderChapters();
+            showSection('chapters');
+        } else {
+            showSection('no-chapters');
+        }
+    } catch (error) {
+        console.error('Auto detection error:', error);
+        alert('Otomatik tespit başarısız oldu. Manuel mod deneyin.');
+        showSection('mode-selection');
+    }
+}
+
+function handleManualMode() {
+    showSection('manual-input');
+    // Add initial rows
+    elements.manualRows.innerHTML = '';
+    addManualChapterRow();
+    addManualChapterRow();
+}
+
+function addManualChapterRow() {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'manual-row';
+
+    const rowIndex = elements.manualRows.children.length;
+
+    rowDiv.innerHTML = `
+        <div class="form-group manual-row-input-name">
+            <label>Bölüm Adı</label>
+            <input type="text" placeholder="Örn: Bölüm ${rowIndex + 1}" data-field="name">
+        </div>
+        <div class="form-group manual-row-input-start">
+            <label>Başlangıç</label>
+            <input type="number" min="1" max="${state.totalPages}" placeholder="1" data-field="start">
+        </div>
+        <div class="form-group manual-row-input-end">
+            <label>Bitiş</label>
+            <input type="number" min="1" max="${state.totalPages}" placeholder="${state.totalPages}" data-field="end">
+        </div>
+        <button class="btn btn-icon btn-remove" title="Sil">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    `;
+
+    // Add remove handler
+    const removeBtn = rowDiv.querySelector('.btn-remove');
+    removeBtn.addEventListener('click', () => {
+        // Keep at least one row
+        if (elements.manualRows.children.length > 1) {
+            rowDiv.remove();
+        } else {
+            alert('En az bir bölüm girmelisiniz!');
+        }
+    });
+
+    elements.manualRows.appendChild(rowDiv);
+}
+
+function cancelManualMode() {
+    showSection('mode-selection');
+}
+
+function createManualChapters() {
+    const rows = elements.manualRows.querySelectorAll('.manual-row');
+    const newChapters = [];
+    const errors = [];
+
+    rows.forEach((row, index) => {
+        const nameInput = row.querySelector('[data-field="name"]');
+        const startInput = row.querySelector('[data-field="start"]');
+        const endInput = row.querySelector('[data-field="end"]');
+
+        const name = nameInput.value.trim() || `Bölüm ${index + 1}`;
+        const start = parseInt(startInput.value);
+        const end = parseInt(endInput.value);
+
+        // Validation
+        if (!start || !end) {
+            errors.push(`Satır ${index + 1}: Sayfa numaraları eksik`);
+            return;
+        }
+
+        if (start < 1 || start > state.totalPages) {
+            errors.push(`Satır ${index + 1}: Başlangıç sayfası geçersiz (1-${state.totalPages})`);
+            return;
+        }
+
+        if (end < 1 || end > state.totalPages) {
+            errors.push(`Satır ${index + 1}: Bitiş sayfası geçersiz (1-${state.totalPages})`);
+            return;
+        }
+
+        if (start > end) {
+            errors.push(`Satır ${index + 1}: Başlangıç bitiş sayfasından büyük olamaz`);
+            return;
+        }
+
+        newChapters.push({
+            id: Date.now() + Math.random(),
+            name: name,
+            startPage: start,
+            endPage: end
+        });
+    });
+
+    if (errors.length > 0) {
+        alert('Hatalar:\n' + errors.join('\n'));
+        return;
+    }
+
+    if (newChapters.length === 0) {
+        alert('En az bir bölüm girmelisiniz!');
+        return;
+    }
+
+    // Check for overlaps
+    newChapters.sort((a, b) => a.startPage - b.startPage);
+    for (let i = 0; i < newChapters.length - 1; i++) {
+        if (newChapters[i].endPage >= newChapters[i + 1].startPage) {
+            alert(`Çakışma: "${newChapters[i].name}" ve "${newChapters[i + 1].name}" aralıkları çakışıyor!`);
+            return;
+        }
+    }
+
+    // Success!
+    state.chapters = newChapters;
+    state.selectedChapters.clear();
+
+    renderChapters();
+    showSection('chapters');
 }
 
 // ========== File Handling ==========
@@ -333,18 +533,8 @@ async function loadPDF(file) {
         elements.pdfName.textContent = file.name;
         elements.pdfInfo.textContent = `${state.totalPages} sayfa`;
 
-        elements.loadingText.textContent = 'Bölümler tespit ediliyor...';
-
-        // Smart chapter detection - scan entire PDF
-        await smartChapterDetection();
-
-        // Show appropriate section
-        if (state.chapters.length > 0) {
-            renderChapters();
-            showSection('chapters');
-        } else {
-            showSection('no-chapters');
-        }
+        // Show mode selection instead of auto-detection
+        showSection('mode-selection');
 
     } catch (error) {
         console.error('PDF loading error:', error);

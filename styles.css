@@ -548,6 +548,187 @@ body {
     color: var(--text-secondary);
 }
 
+/* ========== Mode Selection ========== */
+.mode-selection {
+    padding: 2rem 0;
+    animation: scaleIn 0.5s ease-out;
+}
+
+.mode-container {
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.mode-container h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.mode-description {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+}
+
+.mode-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.btn-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2rem 1.5rem;
+    background: var(--bg-glass);
+    border: 2px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    text-align: center;
+}
+
+.btn-mode svg {
+    width: 48px;
+    height: 48px;
+    color: var(--accent-primary);
+}
+
+.btn-mode:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-primary);
+    box-shadow: var(--shadow-glow);
+    background: var(--bg-card);
+}
+
+.mode-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.mode-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* ========== Manual Input Section ========== */
+.manual-input-section {
+    padding: 2rem 0;
+    animation: slideDown 0.5s ease-out;
+}
+
+.manual-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.manual-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.manual-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.manual-header p {
+    color: var(--text-secondary);
+}
+
+.manual-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.manual-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: start;
+    padding: 1rem;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    animation: slideInRight 0.3s ease-out;
+}
+
+.manual-row .form-group {
+    margin-bottom: 0;
+}
+
+.manual-row .form-group label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.manual-row-input-name {
+    flex: 2;
+}
+
+.manual-row-input-start,
+.manual-row-input-end {
+    flex: 1;
+}
+
+.manual-row input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    transition: all var(--transition-fast);
+}
+
+.manual-row input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: var(--bg-secondary);
+}
+
+.manual-row input::placeholder {
+    color: var(--text-muted);
+}
+
+.manual-row .btn-remove {
+    flex-shrink: 0;
+    padding: 0.5rem;
+    margin-top: 1.5rem;
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+}
+
+.manual-row .btn-remove:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.btn-add-row {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.manual-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.manual-actions .btn {
+    min-width: 120px;
+}
+
 /* ========== Chapters Section ========== */
 .chapters-section {
     animation: fadeIn 0.4s ease;
