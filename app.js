@@ -263,7 +263,9 @@ function toggleAISettings() {
 
 // ========== Utility: Show Section ==========
 function showSection(sectionName) {
+    console.log('===== showSection START =====');
     console.log('showSection called with:', sectionName);
+    console.log('Document ready state:', document.readyState);
 
     // Hide all sections
     const sections = [
@@ -274,24 +276,35 @@ function showSection(sectionName) {
         'chapters-section'
     ];
 
+    console.log('Sections to hide:', sections);
+
     sections.forEach(section => {
         const el = document.getElementById(section);
+        console.log(`Checking ${section}:`, el ? 'FOUND' : 'NOT FOUND');
         if (el) {
             el.classList.add('hidden');
-            console.log('Hiding:', section);
+            console.log(`Hiding ${section}, classList:`, el.classList.toString());
         } else {
             console.warn('Element not found:', section);
         }
     });
 
     // Show requested section
+    console.log('Now trying to show:', sectionName);
     const targetSection = document.getElementById(sectionName);
+    console.log('Target element:', targetSection);
+
     if (targetSection) {
+        console.log('Before remove hidden - classList:', targetSection.classList.toString());
         targetSection.classList.remove('hidden');
-        console.log('Showing:', sectionName);
+        console.log('After remove hidden - classList:', targetSection.classList.toString());
+        console.log('Element computed display:', window.getComputedStyle(targetSection).display);
+        console.log('✅ Showing:', sectionName);
     } else {
-        console.error('Target section not found:', sectionName);
+        console.error('❌ Target section not found:', sectionName);
     }
+
+    console.log('===== showSection END =====');
 }
 
 // ========== Mode Selection ==========
